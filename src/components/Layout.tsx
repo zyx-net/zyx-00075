@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Wrench, LogOut, Plus, ListTodo, User, Upload } from 'lucide-react'
+import { Wrench, LogOut, Plus, ListTodo, User, Upload, Layers } from 'lucide-react'
 import { useAuthStore, hasPermission } from '../store/authStore'
 import type { ReactNode } from 'react'
 
@@ -50,6 +50,15 @@ export default function Layout({ children }: LayoutProps) {
                   >
                     <Upload className="h-4 w-4 mr-1.5" />
                     批量导入
+                  </Link>
+                )}
+                {hasPermission(user, 'templates:read') && (
+                  <Link
+                    to="/templates"
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                  >
+                    <Layers className="h-4 w-4 mr-1.5" />
+                    映射模板
                   </Link>
                 )}
               </div>

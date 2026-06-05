@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express'
-import type { ApiResponse, AuthPayload } from '../types.js'
+import type { ApiResponse, AuthPayload, FieldMapping } from '../types.js'
 import { authMiddleware, requirePermission, requireRole } from '../auth.js'
 import {
   createBatch,
@@ -9,8 +9,11 @@ import {
   getBatches,
   getBatchDetail,
   createExport,
+  analyzeCsvHeaders,
+  applyMappingToCsv,
   type ParsedCsvRow,
 } from '../batchWorkflow.js'
+import { findTemplateById, createTemplateLog } from '../store/templateStore.js'
 import multer from 'multer'
 
 const router = Router()
@@ -74,6 +77,43 @@ router.get('/:id', requirePermission('batch:read'), (req: Request, res: Response
   }
 })
 
+router.post('/analyze-headers', requirePermission('batch:import'), upload.single('file'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({
+        success: false,
+        error: '请上传 CSV 文件',
+      } satisfies ApiResponse)
+      return
+    }
+
+    const fileContent = req.file.buffer.toString('utf-8')
+    const headerInfo = analyzeCsvHeaders(fileContent)
+
+    res.json({
+      success: true,
+      data: {
+        ...headerInfo,
+        fileName: req.file.originalname,
+        fileContent,
+      },
+    } satisfies ApiResponse)
+  } catch (err) {
+    console.error('Analyze headers error:', err)
+    if (err instanceof Error && err.message.includes('只允许上传 CSV 文件')) {
+      res.status(400).json({
+        success: false,
+        error: err.message,
+      } satisfies ApiResponse)
+      return
+    }
+    res.status(500).json({
+      success: false,
+      error: '分析表头失败',
+    } satisfies ApiResponse)
+  }
+})
+
 router.post('/upload', requirePermission('batch:import'), upload.single('file'), async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
@@ -88,7 +128,52 @@ router.post('/upload', requirePermission('batch:import'), upload.single('file'),
     const fileContent = req.file.buffer.toString('utf-8')
     const fileName = req.file.originalname
 
-    const parsedRows = parseCsv(fileContent)
+    const templateId = req.body.templateId ? parseInt(req.body.templateId, 10) : undefined
+    const fieldMappingStr = req.body.fieldMapping as string
+    let fieldMapping: FieldMapping | undefined
+
+    if (fieldMappingStr) {
+      try {
+        fieldMapping = JSON.parse(fieldMappingStr) as FieldMapping
+      } catch {
+        res.status(400).json({
+          success: false,
+          error: 'fieldMapping 格式不正确，应为 JSON',
+        } satisfies ApiResponse)
+        return
+      }
+    }
+
+    let parsedRows: ParsedCsvRow[]
+    let usedTemplateId: number | undefined
+    let usedTemplateName: string | undefined
+
+    if (templateId) {
+      const template = findTemplateById(templateId)
+      if (!template) {
+        res.status(404).json({
+          success: false,
+          error: '指定的模板不存在',
+        } satisfies ApiResponse)
+        return
+      }
+
+      parsedRows = applyMappingToCsv(fileContent, template.fieldMapping)
+      usedTemplateId = template.id
+      usedTemplateName = template.name
+
+      createTemplateLog({
+        templateId: template.id,
+        templateName: template.name,
+        operation: '套用模板',
+        operator,
+        detail: `在批量导入时套用模板「${template.name}」，文件：${fileName}`,
+      })
+    } else if (fieldMapping) {
+      parsedRows = applyMappingToCsv(fileContent, fieldMapping)
+    } else {
+      parsedRows = parseCsv(fileContent)
+    }
 
     if (parsedRows.length === 0) {
       res.status(400).json({
@@ -112,7 +197,12 @@ router.post('/upload', requirePermission('batch:import'), upload.single('file'),
 
     res.json({
       success: true,
-      data: precheckResult,
+      data: {
+        ...precheckResult,
+        usedTemplateId,
+        usedTemplateName,
+        usedMapping: fieldMapping,
+      },
       message: `已解析 ${parsedRows.length} 条数据，请检查预检结果`,
     } satisfies ApiResponse)
   } catch (err) {

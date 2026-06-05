@@ -171,3 +171,88 @@ export interface BatchSubmitResult {
     error?: string
   }[]
 }
+
+export type StandardField = 'customerName' | 'customerPhone' | 'deviceType' | 'deviceModel' | 'faultDescription' | 'priority' | 'initialStatus' | 'assigneeName'
+
+export const STANDARD_FIELDS: StandardField[] = ['customerName', 'customerPhone', 'deviceType', 'deviceModel', 'faultDescription', 'priority', 'initialStatus', 'assigneeName']
+
+export const STANDARD_FIELD_LABELS: Record<StandardField, string> = {
+  customerName: '客户姓名',
+  customerPhone: '客户电话',
+  deviceType: '设备类型',
+  deviceModel: '设备型号',
+  faultDescription: '故障描述',
+  priority: '优先级',
+  initialStatus: '初始状态',
+  assigneeName: '负责人',
+}
+
+export const STANDARD_FIELD_REQUIRED: Record<StandardField, boolean> = {
+  customerName: true,
+  customerPhone: true,
+  deviceType: true,
+  deviceModel: true,
+  faultDescription: true,
+  priority: true,
+  initialStatus: true,
+  assigneeName: false,
+}
+
+export type FieldMapping = Partial<Record<StandardField, string>>
+
+export interface FieldMappingTemplate {
+  id: number
+  name: string
+  description: string | null
+  fieldMapping: FieldMapping
+  created_by: number
+  created_by_name: string
+  updated_by: number
+  updated_by_name: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TemplateOperationLog {
+  id: number
+  template_id: number | null
+  template_name: string
+  operation: string
+  operator_id: number
+  operator_name: string
+  operator_role: string
+  detail: string | null
+  created_at: string
+}
+
+export type TemplateImportConflictAction = 'overwrite' | 'skip' | 'rename'
+
+export interface CsvHeaderInfo {
+  headers: string[]
+  detectedMappings: FieldMapping
+  unmappedHeaders: string[]
+  missingRequiredFields: StandardField[]
+  fileName?: string
+  fileContent?: string
+}
+
+export interface TemplateImportPreviewResult {
+  name: string
+  description?: string
+  fieldMapping: FieldMapping
+  conflict: boolean
+  existingTemplate?: FieldMappingTemplate
+}
+
+export interface TemplateImportResultData {
+  template: FieldMappingTemplate
+  action: TemplateImportConflictAction
+  conflict: boolean
+  existingTemplate?: FieldMappingTemplate
+}
+
+export interface PrecheckResultWithMapping extends PrecheckResult {
+  usedTemplateId?: number
+  usedTemplateName?: string
+  usedMapping?: FieldMapping
+}

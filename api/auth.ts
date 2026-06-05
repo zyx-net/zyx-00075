@@ -18,6 +18,12 @@ export const PERMISSIONS: Record<UserRole, string[]> = {
     'batch:submit',
     'batch:export',
     'batch:read',
+    'templates:read',
+    'templates:create',
+    'templates:update',
+    'templates:delete',
+    'templates:import',
+    'templates:export',
   ],
   technician: [
     'tickets:accept',
@@ -27,12 +33,14 @@ export const PERMISSIONS: Record<UserRole, string[]> = {
     'tickets:read',
     'users:read',
     'batch:read',
+    'templates:read',
   ],
   quality_inspector: [
     'tickets:quality-check',
     'tickets:read',
     'users:read',
     'batch:read',
+    'templates:read',
   ],
 }
 

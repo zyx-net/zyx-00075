@@ -9,6 +9,7 @@ import CreateTicket from './pages/CreateTicket'
 import BatchListPage from './pages/BatchListPage'
 import BatchImportPage from './pages/BatchImportPage'
 import BatchDetailPage from './pages/BatchDetailPage'
+import TemplateListPage from './pages/TemplateListPage'
 
 function App() {
   const { checkAuth, isLoading } = useAuthStore()
@@ -77,6 +78,14 @@ function App() {
           element={
             <ProtectedRoute>
               <BatchDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/templates"
+          element={
+            <ProtectedRoute>
+              <TemplateListPage />
             </ProtectedRoute>
           }
         />

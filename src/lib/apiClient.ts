@@ -1,4 +1,4 @@
-import type { ApiResponse, User, Ticket, OperationLog, QualityRecord, StatusCount, TicketStatus, TicketPriority, ImportBatch, ImportRow, PrecheckResult, PrecheckRowResult, BatchSubmitResult } from '../types'
+import type { ApiResponse, User, Ticket, OperationLog, QualityRecord, StatusCount, TicketStatus, TicketPriority, ImportBatch, ImportRow, PrecheckResult, PrecheckRowResult, BatchSubmitResult, FieldMappingTemplate, FieldMapping, CsvHeaderInfo, TemplateImportPreviewResult, TemplateImportResultData, TemplateImportConflictAction, TemplateOperationLog, PrecheckResultWithMapping } from '../types'
 
 const API_BASE = '/api'
 
@@ -106,10 +106,25 @@ export const batchApi = {
   getBatchDetail: (id: number) =>
     request<{ batch: ImportBatch; rows: ImportRow[] }>(`/batch/${id}`),
 
-  upload: (file: File) => {
+  analyzeHeaders: (file: File) => {
     const formData = new FormData()
     formData.append('file', file)
-    return request<PrecheckResult>('/batch/upload', {
+    return request<CsvHeaderInfo>('/batch/analyze-headers', {
+      method: 'POST',
+      body: formData,
+    })
+  },
+
+  upload: (file: File, options?: { templateId?: number; fieldMapping?: FieldMapping }) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (options?.templateId) {
+      formData.append('templateId', String(options.templateId))
+    }
+    if (options?.fieldMapping) {
+      formData.append('fieldMapping', JSON.stringify(options.fieldMapping))
+    }
+    return request<PrecheckResultWithMapping>('/batch/upload', {
       method: 'POST',
       body: formData,
     })
@@ -144,6 +159,75 @@ export interface CreateTicketParams {
   deviceModel: string
   faultDescription: string
   priority: TicketPriority
+}
+
+export const templateApi = {
+  getTemplates: () => request<FieldMappingTemplate[]>('/templates'),
+
+  getTemplate: (id: number) =>
+    request<FieldMappingTemplate>(`/templates/${id}`),
+
+  createTemplate: (data: { name: string; description?: string; fieldMapping: FieldMapping }) =>
+    request<FieldMappingTemplate>('/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateTemplate: (id: number, data: { name?: string; description?: string; fieldMapping?: FieldMapping }) =>
+    request<FieldMappingTemplate>(`/templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteTemplate: (id: number) =>
+    request<void>(`/templates/${id}`, {
+      method: 'DELETE',
+    }),
+
+  analyzeCsv: (csvContent: string) =>
+    request<CsvHeaderInfo>('/templates/analyze-csv', {
+      method: 'POST',
+      body: JSON.stringify({ csvContent }),
+    }),
+
+  exportTemplate: (id: number) => {
+    const token = getToken()
+    return fetch(`${API_BASE}/templates/${id}/export`, {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+    })
+  },
+
+  importPreview: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request<TemplateImportPreviewResult>('/templates/import-preview', {
+      method: 'POST',
+      body: formData,
+    })
+  },
+
+  importTemplate: (file: File, options?: { action?: TemplateImportConflictAction; newName?: string }) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (options?.action) {
+      formData.append('action', options.action)
+    }
+    if (options?.newName) {
+      formData.append('newName', options.newName)
+    }
+    return request<TemplateImportResultData>('/templates/import', {
+      method: 'POST',
+      body: formData,
+    })
+  },
+
+  getTemplateLogs: (id: number) =>
+    request<TemplateOperationLog[]>(`/templates/${id}/logs`),
+
+  getAllTemplateLogs: () =>
+    request<TemplateOperationLog[]>('/templates/logs/all'),
 }
 
 export const ticketApi = {

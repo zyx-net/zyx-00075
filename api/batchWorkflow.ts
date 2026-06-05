@@ -18,6 +18,7 @@ import {
   findUserById,
   getAllTechnicians,
   createOperationLog,
+  findTemplateById,
   type CreateRowParams,
   type CreateTicketParams,
 } from './store/index.js'
@@ -35,11 +36,62 @@ import type {
   ImportRowStatus,
   ImportBatch,
   ImportRow,
+  FieldMapping,
+  CsvHeaderInfo,
+  StandardField,
+  STANDARD_FIELDS,
+  STANDARD_FIELD_LABELS,
 } from './types.js'
 import { getRoleLabel } from './auth.js'
 
 const PRIORITY_VALUES: TicketPriority[] = ['low', 'medium', 'high', 'urgent']
 const INITIAL_STATUS_VALUES: ImportInitialStatus[] = ['created', 'assigned']
+
+const REQUIRED_STANDARD_FIELDS: StandardField[] = [
+  'customerName',
+  'customerPhone',
+  'deviceType',
+  'deviceModel',
+  'faultDescription',
+  'priority',
+  'initialStatus',
+]
+
+const HEADER_ALIAS_MAP: Record<string, StandardField> = {
+  '客户姓名': 'customerName',
+  '姓名': 'customerName',
+  'customername': 'customerName',
+  'name': 'customerName',
+  '客户电话': 'customerPhone',
+  '电话': 'customerPhone',
+  '手机号': 'customerPhone',
+  'customerphone': 'customerPhone',
+  'phone': 'customerPhone',
+  '设备类型': 'deviceType',
+  '设备': 'deviceType',
+  'devicetype': 'deviceType',
+  'type': 'deviceType',
+  '设备型号': 'deviceModel',
+  '型号': 'deviceModel',
+  'devicemodel': 'deviceModel',
+  'model': 'deviceModel',
+  '故障描述': 'faultDescription',
+  '故障': 'faultDescription',
+  'faultdescription': 'faultDescription',
+  'description': 'faultDescription',
+  'problem': 'faultDescription',
+  '优先级': 'priority',
+  'priority': 'priority',
+  '紧急程度': 'priority',
+  '初始状态': 'initialStatus',
+  '状态': 'initialStatus',
+  'initialstatus': 'initialStatus',
+  'status': 'initialStatus',
+  '负责人': 'assigneeName',
+  '技师': 'assigneeName',
+  'assignee': 'assigneeName',
+  'technician': 'assigneeName',
+}
 
 const PRIORITY_LABEL_MAP: Record<string, TicketPriority> = {
   '低': 'low',
@@ -68,6 +120,102 @@ export interface ParsedCsvRow {
   priority: string | null
   initialStatus: ImportInitialStatus
   assigneeName: string | null
+}
+
+export function analyzeCsvHeaders(content: string): CsvHeaderInfo {
+  const lines = content.split(/\r?\n/).filter(line => line.trim())
+  
+  if (lines.length === 0) {
+    return {
+      headers: [],
+      detectedMappings: {},
+      unmappedHeaders: [],
+      missingRequiredFields: [...REQUIRED_STANDARD_FIELDS],
+    }
+  }
+
+  const headers = parseCsvLine(lines[0]).map(h => h.trim())
+  const detectedMappings: FieldMapping = {}
+  const mappedHeaders = new Set<string>()
+
+  for (const header of headers) {
+    const normalized = header.trim().toLowerCase()
+    const standardField = HEADER_ALIAS_MAP[normalized]
+    if (standardField) {
+      detectedMappings[standardField] = header
+      mappedHeaders.add(header)
+    }
+  }
+
+  const unmappedHeaders = headers.filter(h => !mappedHeaders.has(h))
+
+  const missingRequiredFields = REQUIRED_STANDARD_FIELDS.filter(
+    field => !detectedMappings[field]
+  )
+
+  return {
+    headers,
+    detectedMappings,
+    unmappedHeaders,
+    missingRequiredFields,
+  }
+}
+
+export function applyMappingToCsv(
+  content: string,
+  fieldMapping: FieldMapping
+): ParsedCsvRow[] {
+  const lines = content.split(/\r?\n/).filter(line => line.trim())
+  
+  if (lines.length === 0) {
+    return []
+  }
+
+  const headers = parseCsvLine(lines[0])
+  const headerMap: Record<string, number> = {}
+  headers.forEach((h, i) => {
+    headerMap[h.trim()] = i
+  })
+
+  const reverseMapping: Record<string, StandardField> = {}
+  for (const [standardField, csvHeader] of Object.entries(fieldMapping)) {
+    if (csvHeader) {
+      reverseMapping[csvHeader] = standardField as StandardField
+    }
+  }
+
+  const rows: ParsedCsvRow[] = []
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCsvLine(lines[i])
+    
+    const getValue = (standardField: StandardField): string | null => {
+      const csvHeader = fieldMapping[standardField]
+      if (!csvHeader) return null
+      const idx = headerMap[csvHeader]
+      if (idx !== undefined && values[idx]?.trim()) {
+        return values[idx].trim()
+      }
+      return null
+    }
+
+    const priority = getValue('priority')
+    const initialStatusStr = getValue('initialStatus')
+    const initialStatus: ImportInitialStatus = STATUS_LABEL_MAP[initialStatusStr || 'created'] || 'created'
+
+    rows.push({
+      customerName: getValue('customerName'),
+      customerPhone: getValue('customerPhone'),
+      deviceType: getValue('deviceType'),
+      deviceModel: getValue('deviceModel'),
+      faultDescription: getValue('faultDescription'),
+      priority,
+      initialStatus,
+      assigneeName: getValue('assigneeName'),
+    })
+  }
+
+  return rows
 }
 
 export function parseCsv(content: string): ParsedCsvRow[] {

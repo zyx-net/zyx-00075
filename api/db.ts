@@ -207,6 +207,39 @@ export function initDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_import_rows_status ON import_rows(status);
     CREATE INDEX IF NOT EXISTS idx_import_rows_ticket ON import_rows(ticket_id);
     CREATE INDEX IF NOT EXISTS idx_export_records_batch ON export_records(batch_id);
+
+    CREATE TABLE IF NOT EXISTS field_mapping_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      description TEXT,
+      field_mapping TEXT NOT NULL,
+      created_by INTEGER NOT NULL,
+      created_by_name TEXT NOT NULL,
+      updated_by INTEGER NOT NULL,
+      updated_by_name TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (updated_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS template_operation_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER,
+      template_name TEXT NOT NULL,
+      operation TEXT NOT NULL,
+      operator_id INTEGER NOT NULL,
+      operator_name TEXT NOT NULL,
+      operator_role TEXT NOT NULL,
+      detail TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (template_id) REFERENCES field_mapping_templates(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_templates_name ON field_mapping_templates(name);
+    CREATE INDEX IF NOT EXISTS idx_template_logs_template ON template_operation_logs(template_id);
+    CREATE INDEX IF NOT EXISTS idx_template_logs_operation ON template_operation_logs(operation);
+    CREATE INDEX IF NOT EXISTS idx_template_logs_operator ON template_operation_logs(operator_id);
   `)
 
   console.log('Database initialized successfully')
