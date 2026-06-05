@@ -480,7 +480,7 @@ router.post('/:id/quality-check', requirePermission('tickets:quality-check'), (r
 router.post('/:id/deliver', requireRole(['clerk']), (req: Request, res: Response): void => {
   try {
     const id = parseInt(req.params.id, 10)
-    const { version } = req.body
+    const { version, confirmer, notes, receiptNo, phoneLast4 } = req.body
     const operator = req.user as AuthPayload
 
     if (!version) {
@@ -491,7 +491,23 @@ router.post('/:id/deliver', requireRole(['clerk']), (req: Request, res: Response
       return
     }
 
-    const result = deliverTicket(id, version, operator)
+    if (!confirmer) {
+      res.status(400).json({
+        success: false,
+        error: '请填写客户确认人',
+      } satisfies ApiResponse)
+      return
+    }
+
+    if (!notes) {
+      res.status(400).json({
+        success: false,
+        error: '请填写交付备注',
+      } satisfies ApiResponse)
+      return
+    }
+
+    const result = deliverTicket(id, version, { confirmer, notes, receiptNo, phoneLast4 }, operator)
 
     if (!result.success) {
       res.status(400).json({

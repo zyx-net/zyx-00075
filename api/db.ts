@@ -29,6 +29,18 @@ export function initDatabase(): void {
         DROP TABLE IF EXISTS tickets;
         DROP TABLE IF EXISTS users;
       `)
+    } else if (!columnNames.includes('delivery_confirmer')) {
+      console.log('Adding delivery columns to existing tickets table...')
+      db.exec(`
+        ALTER TABLE tickets ADD COLUMN delivery_confirmer TEXT;
+        ALTER TABLE tickets ADD COLUMN delivery_notes TEXT;
+        ALTER TABLE tickets ADD COLUMN delivery_receipt_no TEXT;
+        ALTER TABLE tickets ADD COLUMN delivery_phone_last4 TEXT;
+        ALTER TABLE tickets ADD COLUMN delivered_at DATETIME;
+        ALTER TABLE tickets ADD COLUMN delivered_by INTEGER;
+        ALTER TABLE tickets ADD COLUMN delivered_by_name TEXT;
+      `)
+      console.log('Delivery columns added successfully')
     }
   }
 
@@ -59,11 +71,19 @@ export function initDatabase(): void {
       estimated_cost REAL,
       repair_details TEXT,
       actual_cost REAL,
+      delivery_confirmer TEXT,
+      delivery_notes TEXT,
+      delivery_receipt_no TEXT,
+      delivery_phone_last4 TEXT,
+      delivered_at DATETIME,
+      delivered_by INTEGER,
+      delivered_by_name TEXT,
       created_by INTEGER NOT NULL,
       created_by_name TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (assignee_id) REFERENCES users(id)
+      FOREIGN KEY (assignee_id) REFERENCES users(id),
+      FOREIGN KEY (delivered_by) REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS operation_logs (

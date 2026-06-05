@@ -40,6 +40,13 @@ export interface Ticket {
   estimated_cost: number | null
   repair_details: string | null
   actual_cost: number | null
+  delivery_confirmer: string | null
+  delivery_notes: string | null
+  delivery_receipt_no: string | null
+  delivery_phone_last4: string | null
+  delivered_at: string | null
+  delivered_by: number | null
+  delivered_by_name: string | null
   created_by: number
   created_by_name: string
   created_at: string

@@ -23,6 +23,13 @@ export interface UpdateTicketParams {
   estimatedCost?: number | null
   repairDetails?: string | null
   actualCost?: number | null
+  deliveryConfirmer?: string | null
+  deliveryNotes?: string | null
+  deliveryReceiptNo?: string | null
+  deliveryPhoneLast4?: string | null
+  deliveredAt?: string | null
+  deliveredBy?: number | null
+  deliveredByName?: string | null
 }
 
 export function createTicket(params: CreateTicketParams): Ticket {
@@ -182,6 +189,41 @@ export function updateTicket(params: UpdateTicketParams): Ticket | undefined {
   if (params.actualCost !== undefined) {
     sql += ', actual_cost = ?'
     values.push(params.actualCost)
+  }
+
+  if (params.deliveryConfirmer !== undefined) {
+    sql += ', delivery_confirmer = ?'
+    values.push(params.deliveryConfirmer)
+  }
+
+  if (params.deliveryNotes !== undefined) {
+    sql += ', delivery_notes = ?'
+    values.push(params.deliveryNotes)
+  }
+
+  if (params.deliveryReceiptNo !== undefined) {
+    sql += ', delivery_receipt_no = ?'
+    values.push(params.deliveryReceiptNo)
+  }
+
+  if (params.deliveryPhoneLast4 !== undefined) {
+    sql += ', delivery_phone_last4 = ?'
+    values.push(params.deliveryPhoneLast4)
+  }
+
+  if (params.deliveredAt !== undefined) {
+    sql += ', delivered_at = ?'
+    values.push(params.deliveredAt)
+  }
+
+  if (params.deliveredBy !== undefined) {
+    sql += ', delivered_by = ?'
+    values.push(params.deliveredBy)
+  }
+
+  if (params.deliveredByName !== undefined) {
+    sql += ', delivered_by_name = ?'
+    values.push(params.deliveredByName)
   }
 
   sql += ' WHERE id = ? AND version = ?'

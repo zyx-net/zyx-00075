@@ -1,4 +1,4 @@
-import type { Ticket, TicketStatus, UserRole, AuthPayload } from './types.js'
+import type { Ticket, TicketStatus, AuthPayload } from './types.js'
 import {
   createTicket as storeCreateTicket,
   updateTicket,
@@ -512,9 +512,17 @@ export function performQualityCheck(
   }
 }
 
+export interface DeliverParams {
+  confirmer: string
+  notes: string
+  receiptNo?: string
+  phoneLast4?: string
+}
+
 export function deliverTicket(
   ticketId: number,
   currentVersion: number,
+  deliverParams: DeliverParams,
   operator: AuthPayload
 ): TransitionResult {
   const ticket = findTicketById(ticketId)
@@ -550,14 +558,45 @@ export function deliverTicket(
     }
   }
 
+  if (!deliverParams.confirmer?.trim()) {
+    return { success: false, error: '请填写客户确认人' }
+  }
+
+  if (!deliverParams.notes?.trim()) {
+    return { success: false, error: '请填写交付备注' }
+  }
+
+  if (deliverParams.phoneLast4 && !/^\d{4}$/.test(deliverParams.phoneLast4)) {
+    return { success: false, error: '联系电话后四位必须是4位数字' }
+  }
+
   try {
+    const now = new Date().toISOString()
     const updated = updateTicket({
       id: ticketId,
       currentVersion,
       status: 'delivered',
+      deliveryConfirmer: deliverParams.confirmer.trim(),
+      deliveryNotes: deliverParams.notes.trim(),
+      deliveryReceiptNo: deliverParams.receiptNo?.trim() || null,
+      deliveryPhoneLast4: deliverParams.phoneLast4?.trim() || null,
+      deliveredAt: now,
+      deliveredBy: operator.userId,
+      deliveredByName: operator.name,
     })
 
     if (updated) {
+      const remarkParts = [
+        `已交付客户，确认人：${deliverParams.confirmer.trim()}`,
+        `备注：${deliverParams.notes.trim()}`,
+      ]
+      if (deliverParams.receiptNo?.trim()) {
+        remarkParts.push(`回执编号：${deliverParams.receiptNo.trim()}`)
+      }
+      if (deliverParams.phoneLast4?.trim()) {
+        remarkParts.push(`联系电话后四位：${deliverParams.phoneLast4.trim()}`)
+      }
+
       createOperationLog({
         ticketId,
         operation: OPERATION_LABELS.deliver,
@@ -566,7 +605,7 @@ export function deliverTicket(
         operatorRole: operator.role,
         fromStatus: ticket.status,
         toStatus: 'delivered',
-        remark: '已交付客户',
+        remark: remarkParts.join('，'),
       })
     }
 

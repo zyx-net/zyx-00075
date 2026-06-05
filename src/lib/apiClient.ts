@@ -172,10 +172,10 @@ export const ticketApi = {
       body: JSON.stringify({ passed, comment, version }),
     }),
 
-  deliver: (id: number, version: number) =>
+  deliver: (id: number, version: number, params: { confirmer: string; notes: string; receiptNo?: string; phoneLast4?: string }) =>
     request<Ticket>(`/tickets/${id}/deliver`, {
       method: 'POST',
-      body: JSON.stringify({ version }),
+      body: JSON.stringify({ version, ...params }),
     }),
 
   cancel: (id: number, reason: string | undefined, version: number) =>

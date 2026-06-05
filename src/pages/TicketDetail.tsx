@@ -10,11 +10,11 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Send,
   Wrench,
   Eye,
   Package,
   ClipboardCheck,
+  FileText,
   Ban,
 } from 'lucide-react'
 import Layout from '../components/Layout'
@@ -32,6 +32,7 @@ type ModalType =
   | 'repair'
   | 'submitQuality'
   | 'qualityCheck'
+  | 'deliver'
   | 'cancel'
   | null
 
@@ -58,6 +59,10 @@ export default function TicketDetail() {
     actualCost: '',
     qualityPassed: true,
     qualityComment: '',
+    deliveryConfirmer: '',
+    deliveryNotes: '',
+    deliveryReceiptNo: '',
+    deliveryPhoneLast4: '',
     cancelReason: '',
   })
 
@@ -208,8 +213,25 @@ export default function TicketDetail() {
 
   const handleDeliver = () => {
     if (!ticket) return
+    if (!formData.deliveryConfirmer.trim()) {
+      showError('请填写客户确认人')
+      return
+    }
+    if (!formData.deliveryNotes.trim()) {
+      showError('请填写交付备注')
+      return
+    }
+    if (formData.deliveryPhoneLast4 && !/^\d{4}$/.test(formData.deliveryPhoneLast4)) {
+      showError('联系电话后四位必须是4位数字')
+      return
+    }
     handleAction(
-      () => ticketApi.deliver(ticket.id, ticket.version),
+      () => ticketApi.deliver(ticket.id, ticket.version, {
+        confirmer: formData.deliveryConfirmer,
+        notes: formData.deliveryNotes,
+        receiptNo: formData.deliveryReceiptNo || undefined,
+        phoneLast4: formData.deliveryPhoneLast4 || undefined,
+      }),
       '交付成功'
     )
   }
@@ -417,6 +439,50 @@ export default function TicketDetail() {
                 </div>
               )}
 
+              {ticket.delivery_confirmer && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">交付信息</h3>
+                  <div className="bg-green-50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center text-sm">
+                      <UserIcon className="h-4 w-4 mr-2 text-green-600" />
+                      <span className="text-gray-600 w-24">客户确认人：</span>
+                      <span className="font-medium text-gray-900">{ticket.delivery_confirmer}</span>
+                    </div>
+                    <div className="flex items-start text-sm">
+                      <ClipboardCheck className="h-4 w-4 mr-2 text-green-600 mt-0.5" />
+                      <span className="text-gray-600 w-24 flex-shrink-0">交付备注：</span>
+                      <span className="text-gray-900">{ticket.delivery_notes}</span>
+                    </div>
+                    {ticket.delivery_receipt_no && (
+                      <div className="flex items-center text-sm">
+                        <FileText className="h-4 w-4 mr-2 text-green-600" />
+                        <span className="text-gray-600 w-24">回执编号：</span>
+                        <span className="font-medium text-gray-900">{ticket.delivery_receipt_no}</span>
+                      </div>
+                    )}
+                    {ticket.delivery_phone_last4 && (
+                      <div className="flex items-center text-sm">
+                        <Phone className="h-4 w-4 mr-2 text-green-600" />
+                        <span className="text-gray-600 w-24">联系电话后四位：</span>
+                        <span className="font-medium text-gray-900">{ticket.delivery_phone_last4}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm">
+                      <UserIcon className="h-4 w-4 mr-2 text-green-600" />
+                      <span className="text-gray-600 w-24">交付人：</span>
+                      <span className="font-medium text-gray-900">{ticket.delivered_by_name}</span>
+                    </div>
+                    <div className="flex items-center text-sm">
+                      <Calendar className="h-4 w-4 mr-2 text-green-600" />
+                      <span className="text-gray-600 w-24">交付时间：</span>
+                      <span className="font-medium text-gray-900">
+                        {ticket.delivered_at ? dayjs(ticket.delivered_at).format('YYYY-MM-DD HH:mm') : '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {(ticket.estimated_cost !== null || ticket.actual_cost !== null) && (
                 <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
                   {ticket.estimated_cost !== null && (
@@ -581,9 +647,8 @@ export default function TicketDetail() {
 
                   {canDeliver && (
                     <button
-                      onClick={handleDeliver}
-                      disabled={submitting}
-                      className="w-full flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                      onClick={() => setActiveModal('deliver')}
+                      className="w-full flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                     >
                       <Package className="h-4 w-4 mr-2" />
                       交付客户
@@ -853,6 +918,83 @@ export default function TicketDetail() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50"
               >
                 {submitting ? '提交中...' : '确认取消'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'deliver' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4">交付确认</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  客户确认人 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.deliveryConfirmer}
+                  onChange={(e) => setFormData({ ...formData, deliveryConfirmer: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="请输入客户确认人姓名"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  交付备注 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={formData.deliveryNotes}
+                  onChange={(e) => setFormData({ ...formData, deliveryNotes: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none"
+                  placeholder="请输入交付备注，如设备状态、注意事项等..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  回执编号 <span className="text-gray-400 text-xs">(选填)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.deliveryReceiptNo}
+                  onChange={(e) => setFormData({ ...formData, deliveryReceiptNo: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="请输入回执编号"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  联系电话后四位 <span className="text-gray-400 text-xs">(选填，4位数字)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.deliveryPhoneLast4}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 4)
+                    setFormData({ ...formData, deliveryPhoneLast4: val })
+                  }}
+                  maxLength={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="请输入联系电话后四位"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleDeliver}
+                disabled={submitting}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
+              >
+                {submitting ? '提交中...' : '确认交付'}
               </button>
             </div>
           </div>
