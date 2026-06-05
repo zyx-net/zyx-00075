@@ -278,7 +278,7 @@ const tests = [
     assert.ok(headers.includes('工单状态'), 'Should have ticket_status column')
     assert.ok(headers.includes('当前负责人'), 'Should have assignee column')
     assert.ok(headers.includes('版本号'), 'Should have version column')
-    assert.ok(headers.includes('最近操作'), 'Should have last_operation column')
+    assert.ok(headers.includes('最近操作摘要'), 'Should have last_operation column')
     
     assert.equal(data.length, 4, 'Should have 4 data rows')
     
@@ -286,7 +286,7 @@ const tests = [
       assert.ok(row['工单号'], 'Each row should have ticket_no')
       assert.ok(row['工单状态'], 'Each row should have status')
       assert.ok(row['版本号'], 'Each row should have version')
-      assert.ok(row['最近操作'], 'Each row should have last operation')
+      assert.ok(row['最近操作摘要'], 'Each row should have last operation summary')
     })
     
     console.log(`   导出成功：CSV包含 ${data.length} 条记录，包含工单状态、负责人、版本号、最近操作`)
@@ -370,7 +370,7 @@ const tests = [
     
     const requiredColumns = ['行号', '客户姓名', '客户电话', '设备类型', '设备型号', 
       '故障描述', '优先级', '初始状态', '负责人', '行状态', '工单号', 
-      '工单状态', '当前负责人', '版本号', '最近操作', '错误信息']
+      '工单状态', '当前负责人', '版本号', '最近操作摘要', '错误信息']
     
     for (const col of requiredColumns) {
       assert.ok(headers.includes(col), `Missing required column: ${col}`)
@@ -380,7 +380,7 @@ const tests = [
       assert.equal(row['行号'], String(index + 1), 'Row number should match')
       assert.ok(row['工单状态'], `Row ${index + 1} should have ticket status`)
       assert.ok(row['版本号'], `Row ${index + 1} should have version`)
-      assert.ok(row['最近操作'], `Row ${index + 1} should have last operation`)
+      assert.ok(row['最近操作摘要'], `Row ${index + 1} should have last operation summary`)
     })
     
     console.log(`   导出内容校验通过：包含所有必需列，数据完整`)

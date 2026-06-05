@@ -64,6 +64,10 @@ export function hasPermission(user: User | null, permission: string): boolean {
       'tickets:cancel',
       'tickets:read',
       'users:read',
+      'batch:read',
+      'batch:import',
+      'batch:submit',
+      'batch:export',
     ],
     technician: [
       'tickets:accept',
@@ -72,11 +76,13 @@ export function hasPermission(user: User | null, permission: string): boolean {
       'tickets:submit-quality',
       'tickets:read',
       'users:read',
+      'batch:read',
     ],
     quality_inspector: [
       'tickets:quality-check',
       'tickets:read',
       'users:read',
+      'batch:read',
     ],
   }
 

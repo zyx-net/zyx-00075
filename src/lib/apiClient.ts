@@ -16,13 +16,18 @@ function clearToken(): void {
 
 interface RequestOptions extends RequestInit {
   headers?: Record<string, string>
+  body?: BodyInit | null
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
   const token = getToken()
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...options.headers,
+  }
+
+  const isFormData = options.body instanceof FormData
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json'
   }
 
   if (token) {
@@ -106,8 +111,7 @@ export const batchApi = {
     formData.append('file', file)
     return request<PrecheckResult>('/batch/upload', {
       method: 'POST',
-      body: formData as unknown as string,
-      headers: {},
+      body: formData,
     })
   },
 

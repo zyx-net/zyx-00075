@@ -15,16 +15,16 @@ import {
   findExportRecordById,
   getLogsByTicketId,
   findTicketByNo,
+  findUserById,
+  getAllTechnicians,
+  createOperationLog,
   type CreateRowParams,
-  type ImportBatch,
-  type ImportRow,
+  type CreateTicketParams,
 } from './store/index.js'
 import {
   createTicket,
   assignTicket,
-  type CreateTicketParams,
 } from './workflow.js'
-import { findUserById, getAllTechnicians } from './store/index.js'
 import type {
   AuthPayload,
   TicketPriority,
@@ -33,8 +33,9 @@ import type {
   PrecheckRowResult,
   BatchSubmitResult,
   ImportRowStatus,
+  ImportBatch,
+  ImportRow,
 } from './types.js'
-import { createOperationLog } from './store/index.js'
 import { getRoleLabel } from './auth.js'
 
 const PRIORITY_VALUES: TicketPriority[] = ['low', 'medium', 'high', 'urgent']
@@ -459,7 +460,9 @@ export function submitBatch(options: SubmitBatchOptions): BatchSubmitResult {
     }
   }
 
-  const failCountFinal = failCount
+  const errorRows = getRowsByBatchIdWithFilter(batchId, { status: 'error' })
+  const precheckFailCount = errorRows.length
+  const failCountFinal = failCount + precheckFailCount
 
   updateBatchStatus({
     id: batchId,
@@ -599,7 +602,7 @@ export function generateExportCsv(data: ExportRowData[]): string {
   const headers = [
     '行号', '客户姓名', '客户电话', '设备类型', '设备型号',
     '故障描述', '优先级', '初始状态', '负责人', '行状态',
-    '工单号', '工单状态', '当前负责人', '版本号', '最近操作', '错误信息'
+    '工单号', '工单状态', '当前负责人', '版本号', '最近操作摘要', '错误信息'
   ]
 
   const escapeCsv = (value: string | number | null): string => {
