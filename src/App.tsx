@@ -6,6 +6,9 @@ import Login from './pages/Login'
 import QueuePage from './pages/QueuePage'
 import TicketDetail from './pages/TicketDetail'
 import CreateTicket from './pages/CreateTicket'
+import BatchListPage from './pages/BatchListPage'
+import BatchImportPage from './pages/BatchImportPage'
+import BatchDetailPage from './pages/BatchDetailPage'
 
 function App() {
   const { checkAuth, isLoading } = useAuthStore()
@@ -50,6 +53,30 @@ function App() {
           element={
             <ProtectedRoute>
               <TicketDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/batch"
+          element={
+            <ProtectedRoute>
+              <BatchListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/batch/import"
+          element={
+            <ProtectedRoute>
+              <BatchImportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/batch/:id"
+          element={
+            <ProtectedRoute>
+              <BatchDetailPage />
             </ProtectedRoute>
           }
         />

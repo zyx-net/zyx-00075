@@ -44,6 +44,35 @@ export function initDatabase(): void {
     }
   }
 
+  if (tableExists('operation_logs')) {
+    const logColumns = db.prepare("PRAGMA table_info(operation_logs)").all() as { name: string; notnull: number }[]
+    const ticketIdColumn = logColumns.find(c => c.name === 'ticket_id')
+    if (ticketIdColumn && ticketIdColumn.notnull === 1) {
+      console.log('Migrating operation_logs table to allow NULL ticket_id...')
+      db.exec(`
+        DROP TABLE IF EXISTS operation_logs_new;
+        CREATE TABLE operation_logs_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ticket_id INTEGER,
+          operation TEXT NOT NULL,
+          operator_id INTEGER NOT NULL,
+          operator_name TEXT NOT NULL,
+          operator_role TEXT NOT NULL,
+          from_status TEXT,
+          to_status TEXT,
+          remark TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+        );
+        INSERT INTO operation_logs_new SELECT * FROM operation_logs;
+        DROP TABLE operation_logs;
+        ALTER TABLE operation_logs_new RENAME TO operation_logs;
+        CREATE INDEX IF NOT EXISTS idx_logs_ticket ON operation_logs(ticket_id);
+      `)
+      console.log('operation_logs table migrated successfully')
+    }
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,7 +117,7 @@ export function initDatabase(): void {
 
     CREATE TABLE IF NOT EXISTS operation_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ticket_id INTEGER NOT NULL,
+      ticket_id INTEGER,
       operation TEXT NOT NULL,
       operator_id INTEGER NOT NULL,
       operator_name TEXT NOT NULL,
@@ -117,6 +146,67 @@ export function initDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_tickets_created_at ON tickets(created_at);
     CREATE INDEX IF NOT EXISTS idx_logs_ticket ON operation_logs(ticket_id);
     CREATE INDEX IF NOT EXISTS idx_quality_ticket ON quality_records(ticket_id);
+
+    CREATE TABLE IF NOT EXISTS import_batches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      batch_no TEXT UNIQUE NOT NULL,
+      file_name TEXT NOT NULL,
+      total_rows INTEGER NOT NULL DEFAULT 0,
+      success_count INTEGER NOT NULL DEFAULT 0,
+      fail_count INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'uploading' CHECK(status IN ('uploading', 'prechecking', 'prechecked', 'submitting', 'completed', 'failed')),
+      created_by INTEGER NOT NULL,
+      created_by_name TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS import_rows (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      batch_id INTEGER NOT NULL,
+      row_index INTEGER NOT NULL,
+      customer_name TEXT,
+      customer_phone TEXT,
+      device_type TEXT,
+      device_model TEXT,
+      fault_description TEXT,
+      priority TEXT,
+      initial_status TEXT NOT NULL DEFAULT 'created' CHECK(initial_status IN ('created', 'assigned')),
+      assignee_id INTEGER,
+      precheck_errors TEXT,
+      precheck_warnings TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'prechecked', 'warning', 'error', 'submitted', 'ticket_created', 'ticket_assigned', 'failed')),
+      ticket_id INTEGER,
+      ticket_no TEXT,
+      error_message TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (batch_id) REFERENCES import_batches(id) ON DELETE CASCADE,
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id),
+      FOREIGN KEY (assignee_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS export_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      batch_id INTEGER NOT NULL,
+      export_type TEXT NOT NULL CHECK(export_type IN ('all', 'success', 'failed')),
+      file_name TEXT NOT NULL,
+      total_rows INTEGER NOT NULL,
+      exported_by INTEGER NOT NULL,
+      exported_by_name TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (batch_id) REFERENCES import_batches(id) ON DELETE CASCADE,
+      FOREIGN KEY (exported_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_import_batches_status ON import_batches(status);
+    CREATE INDEX IF NOT EXISTS idx_import_batches_created_by ON import_batches(created_by);
+    CREATE INDEX IF NOT EXISTS idx_import_batches_created_at ON import_batches(created_at);
+    CREATE INDEX IF NOT EXISTS idx_import_rows_batch ON import_rows(batch_id);
+    CREATE INDEX IF NOT EXISTS idx_import_rows_status ON import_rows(status);
+    CREATE INDEX IF NOT EXISTS idx_import_rows_ticket ON import_rows(ticket_id);
+    CREATE INDEX IF NOT EXISTS idx_export_records_batch ON export_records(batch_id);
   `)
 
   console.log('Database initialized successfully')
@@ -127,6 +217,20 @@ export function generateTicketNo(): string {
   const prefix = `WD${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
   
   const result = db.prepare('SELECT MAX(ticket_no) as max_no FROM tickets WHERE ticket_no LIKE ?').get(`${prefix}%`) as { max_no: string | null }
+  
+  let seq = 1
+  if (result.max_no) {
+    seq = parseInt(result.max_no.slice(-4), 10) + 1
+  }
+  
+  return `${prefix}${String(seq).padStart(4, '0')}`
+}
+
+export function generateBatchNo(): string {
+  const date = new Date()
+  const prefix = `PC${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
+  
+  const result = db.prepare('SELECT MAX(batch_no) as max_no FROM import_batches WHERE batch_no LIKE ?').get(`${prefix}%`) as { max_no: string | null }
   
   let seq = 1
   if (result.max_no) {

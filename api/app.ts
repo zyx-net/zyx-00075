@@ -10,6 +10,7 @@ import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import authRoutes from './routes/auth.js'
 import ticketRoutes from './routes/tickets.js'
+import batchImportRoutes from './routes/batchImport.js'
 import { initDatabase } from './db.js'
 import { seedDatabase } from './seed.js'
 
@@ -29,6 +30,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 app.use('/api/auth', authRoutes)
 app.use('/api/tickets', ticketRoutes)
+app.use('/api/batch', batchImportRoutes)
 
 app.use(
   '/api/health',

@@ -2,7 +2,7 @@ import { db } from '../db.js'
 import type { OperationLog, UserRole } from '../types.js'
 
 export interface CreateLogParams {
-  ticketId: number
+  ticketId: number | null
   operation: string
   operatorId: number
   operatorName: string

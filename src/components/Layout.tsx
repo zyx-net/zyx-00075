@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Wrench, LogOut, Plus, ListTodo, User } from 'lucide-react'
+import { Wrench, LogOut, Plus, ListTodo, User, Upload } from 'lucide-react'
 import { useAuthStore, hasPermission } from '../store/authStore'
 import type { ReactNode } from 'react'
 
@@ -41,6 +41,15 @@ export default function Layout({ children }: LayoutProps) {
                   >
                     <Plus className="h-4 w-4 mr-1.5" />
                     新建工单
+                  </Link>
+                )}
+                {hasPermission(user, 'batch:read') && (
+                  <Link
+                    to="/batch"
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                  >
+                    <Upload className="h-4 w-4 mr-1.5" />
+                    批量导入
                   </Link>
                 )}
               </div>

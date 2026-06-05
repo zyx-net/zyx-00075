@@ -1,4 +1,4 @@
-import type { ApiResponse, User, Ticket, OperationLog, QualityRecord, StatusCount, TicketStatus, TicketPriority } from '../types'
+import type { ApiResponse, User, Ticket, OperationLog, QualityRecord, StatusCount, TicketStatus, TicketPriority, ImportBatch, ImportRow, PrecheckResult, PrecheckRowResult, BatchSubmitResult } from '../types'
 
 const API_BASE = '/api'
 
@@ -93,6 +93,44 @@ export const authApi = {
   getMe: () => request<User>('/auth/me'),
 
   getUsers: () => request<User[]>('/auth/users'),
+}
+
+export const batchApi = {
+  getBatches: () => request<ImportBatch[]>('/batch'),
+
+  getBatchDetail: (id: number) =>
+    request<{ batch: ImportBatch; rows: ImportRow[] }>(`/batch/${id}`),
+
+  upload: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request<PrecheckResult>('/batch/upload', {
+      method: 'POST',
+      body: formData as unknown as string,
+      headers: {},
+    })
+  },
+
+  precheck: (id: number, rows: PrecheckRowResult[]) =>
+    request<PrecheckResult>(`/batch/${id}/precheck`, {
+      method: 'POST',
+      body: JSON.stringify({ rows }),
+    }),
+
+  submit: (id: number, rowIds?: number[]) =>
+    request<BatchSubmitResult>(`/batch/${id}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ rowIds }),
+    }),
+
+  export: (id: number, type: 'all' | 'success' | 'failed' = 'all') => {
+    const token = getToken()
+    return fetch(`${API_BASE}/batch/${id}/export?type=${type}`, {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+    })
+  },
 }
 
 export interface CreateTicketParams {

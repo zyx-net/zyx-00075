@@ -20,3 +20,7 @@ export function getUsersByRole(role: UserRole): User[] {
   const stmt = db.prepare('SELECT id, username, name, role, created_at FROM users WHERE role = ? ORDER BY name')
   return stmt.all(role) as User[]
 }
+
+export function getAllTechnicians(): User[] {
+  return getUsersByRole('technician')
+}

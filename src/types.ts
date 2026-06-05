@@ -89,3 +89,85 @@ export interface StatusCount {
   count: number
   label: string
 }
+
+export type ImportBatchStatus = 'uploading' | 'prechecking' | 'prechecked' | 'submitting' | 'completed' | 'failed'
+
+export type ImportRowStatus = 'pending' | 'prechecked' | 'warning' | 'error' | 'submitted' | 'ticket_created' | 'ticket_assigned' | 'failed'
+
+export type ImportInitialStatus = 'created' | 'assigned'
+
+export interface ImportBatch {
+  id: number
+  batch_no: string
+  file_name: string
+  total_rows: number
+  success_count: number
+  fail_count: number
+  status: ImportBatchStatus
+  created_by: number
+  created_by_name: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ImportRow {
+  id: number
+  batch_id: number
+  row_index: number
+  customer_name: string | null
+  customer_phone: string | null
+  device_type: string | null
+  device_model: string | null
+  fault_description: string | null
+  priority: string | null
+  initial_status: ImportInitialStatus
+  assignee_id: number | null
+  precheck_errors: string | null
+  precheck_warnings: string | null
+  status: ImportRowStatus
+  ticket_id: number | null
+  ticket_no: string | null
+  error_message: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PrecheckRowResult {
+  rowIndex: number
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+  data: {
+    customerName: string
+    customerPhone: string
+    deviceType: string
+    deviceModel: string
+    faultDescription: string
+    priority: TicketPriority
+    initialStatus: ImportInitialStatus
+    assigneeId: number | null
+  } | null
+}
+
+export interface PrecheckResult {
+  batchId: number
+  totalRows: number
+  validRows: number
+  invalidRows: number
+  warningRows: number
+  rows: PrecheckRowResult[]
+}
+
+export interface BatchSubmitResult {
+  batchId: number
+  submittedRows: number
+  successRows: number
+  failedRows: number
+  results: {
+    rowId: number
+    success: boolean
+    ticketId?: number
+    ticketNo?: string
+    error?: string
+  }[]
+}
