@@ -41,6 +41,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
       if (response.status === 401) {
         clearToken()
       }
+
+      if (response.status === 409 || data.error === 'VERSION_CONFLICT' || (data.error as string)?.includes('版本冲突')) {
+        return {
+          success: false,
+          error: data.message || '版本已变化，工单已被他人修改，请刷新后重试',
+          code: response.status,
+          isVersionConflict: true,
+        }
+      }
+
       return {
         success: false,
         error: data.error || '请求失败',

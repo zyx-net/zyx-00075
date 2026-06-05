@@ -3,6 +3,7 @@ import express, {
   type Response,
   type NextFunction,
 } from 'express'
+import type { ApiResponse } from './types.js'
 import cors from 'cors'
 import path from 'path'
 import dotenv from 'dotenv'
@@ -40,6 +41,15 @@ app.use(
 )
 
 app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
+  if (error.message === 'VERSION_CONFLICT') {
+    res.status(409).json({
+      success: false,
+      error: 'VERSION_CONFLICT',
+      message: '版本已变化，工单已被他人修改，请刷新后重试',
+    } satisfies ApiResponse)
+    return
+  }
+
   console.error('Server error:', error)
   res.status(500).json({
     success: false,

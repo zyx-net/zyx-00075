@@ -75,6 +75,7 @@ export interface ApiResponse<T = unknown> {
   error?: string
   message?: string
   code?: number
+  isVersionConflict?: boolean
 }
 
 export interface StatusCount {

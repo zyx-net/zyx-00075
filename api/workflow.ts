@@ -103,8 +103,6 @@ export function assignTicket(
     return { success: false, error: '工单不存在' }
   }
 
-  checkVersion(ticket, currentVersion)
-
   if (!canTransition(ticket.status, 'assigned')) {
     return {
       success: false,
@@ -165,8 +163,6 @@ export function acceptTicket(
     return { success: false, error: '工单不存在' }
   }
 
-  checkVersion(ticket, currentVersion)
-
   if (ticket.assignee_id !== operator.userId) {
     return { success: false, error: '只能接受分派给自己的工单' }
   }
@@ -221,8 +217,6 @@ export function submitDiagnosis(
   if (!ticket) {
     return { success: false, error: '工单不存在' }
   }
-
-  checkVersion(ticket, currentVersion)
 
   if (ticket.assignee_id !== operator.userId) {
     return { success: false, error: '只能处理分派给自己的工单' }
@@ -287,8 +281,6 @@ export function approveQuote(
     return { success: false, error: '工单不存在' }
   }
 
-  checkVersion(ticket, currentVersion)
-
   if (!canTransition(ticket.status, 'quote_approved')) {
     return {
       success: false,
@@ -337,8 +329,6 @@ export function startRepair(
   if (!ticket) {
     return { success: false, error: '工单不存在' }
   }
-
-  checkVersion(ticket, currentVersion)
 
   if (ticket.assignee_id !== operator.userId) {
     return { success: false, error: '只能处理分派给自己的工单' }
@@ -394,8 +384,6 @@ export function submitQualityCheck(
   if (!ticket) {
     return { success: false, error: '工单不存在' }
   }
-
-  checkVersion(ticket, currentVersion)
 
   if (ticket.assignee_id !== operator.userId) {
     return { success: false, error: '只能处理分派给自己的工单' }
@@ -461,8 +449,6 @@ export function performQualityCheck(
   if (!ticket) {
     return { success: false, error: '工单不存在' }
   }
-
-  checkVersion(ticket, currentVersion)
 
   if (ticket.status !== 'quality_check') {
     return {
@@ -536,8 +522,6 @@ export function deliverTicket(
     return { success: false, error: '工单不存在' }
   }
 
-  checkVersion(ticket, currentVersion)
-
   if (operator.role !== 'clerk') {
     return {
       success: false,
@@ -608,8 +592,6 @@ export function cancelTicket(
   if (!ticket) {
     return { success: false, error: '工单不存在' }
   }
-
-  checkVersion(ticket, currentVersion)
 
   if (isTerminalStatus(ticket.status)) {
     return {
